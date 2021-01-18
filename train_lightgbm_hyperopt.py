@@ -58,27 +58,32 @@ class LGBHyperoptProd(object):
     def get_optim_objective(self, train_data):
         def objective(params:dict, folds:int = 3):
             
-            params['num_boost_round'] = int(params['num_boost_round'])
-            params['num_leaves'] = int(params['num_leaves'])
-            params['seed'] = 18
-            params['verbose'] = -1
+            # params['num_boost_round'] = int(params['num_boost_round'])
+            # params['num_leaves'] = int(params['num_leaves'])
+            # params['seed'] = 18
+            # params['verbose'] = -1
 
             cv_result = lgb.cv(
                 params,
                 train_data,
                 num_boost_round=params['num_boost_round'],
                 metrics=['l1', 'l2', 'mape'],
-                nfold=3,
+                nfold=folds,
                 #set starified=False ot use cv for regression
                 stratified=False,
                 verbose_eval=10,
-                early_stopping_rounds=folds)    
+                early_stopping_rounds=10)    
             loss = cv_result['mape-mean'][-1]
             return loss
         return objective
         
-    def get_optimal_model_hyperparams(self):
-        pass
+    def get_optimal_model_hyperparams(self, params, train_data):
+        best = fmin(fn=self.get_optim_objective,
+                space=params,
+                algo=tpe.suggest,
+                max_evals=maxevals,
+                trials=trials)
+        return best
     def tag_model_for_production(self, experiment_name):
         #setup mlflow experiment. log model with best 
         #hyperparams and tag it with lable
