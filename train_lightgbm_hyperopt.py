@@ -57,11 +57,6 @@ class LGBHyperoptProd(object):
 
     def get_optim_objective(self, train_data):
         def objective(params:dict, folds:int = 3):
-            
-            # params['num_boost_round'] = int(params['num_boost_round'])
-            # params['num_leaves'] = int(params['num_leaves'])
-            # params['seed'] = 18
-            # params['verbose'] = -1
 
             cv_result = lgb.cv(
                 params,
@@ -84,10 +79,34 @@ class LGBHyperoptProd(object):
                 max_evals=maxevals,
                 trials=trials)
         return best
-    def tag_model_for_production(self, experiment_name):
-        #setup mlflow experiment. log model with best 
+    def tag_model_for_production(self, experiment_name, train_data, hyperparams):
+        #Set MLflow experiment name. Used for better tracking structure
+        try:
+            experiment_id = mlflow.create_experiment(experiment_name)
+        except:
+            mlflow.set_experiment(experiment_name)
+        #setup mlflow experiment. run and log model with best 
         #hyperparams and tag it with lable
-        pass
+
+        X = train_data.get_data()
+        y = train_data.get_label()
+
+        #change type from float to int, recuired by lgb
+        params['num_boost_round'] = int(params['num_boost_round'])
+        params['num_leaves'] = int(params['num_leaves'])
+
+        with mlflow.start_run() as run:
+            ### unpack dict with best params
+            model = lgb.LGBMRegressor(**best)
+            model.fit(X,y)
+            #best item is dict with best hyperparams returned from minimizing objective (mape)
+            for name, value in best.items():
+                mlflow.log_param(name, value)
+                mlflow.log_metric('mape', trials.best_trial['result']['loss'])
+                mlflow.sklearn.log_model(model, "model")
+                #tag model for easier search across possible big model pool in mlflow 
+                mlflow.set_tag("model.type", "production")
+        
     def serve_model(self):
         #execute as bash command
         pass
