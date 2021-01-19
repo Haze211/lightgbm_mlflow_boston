@@ -128,6 +128,7 @@ class LGBHyperoptProd(object):
                 #dataset version is used to distinguish possbile diffrenet preprocessing options.
                 #might be used together with dvc workflow
                 mlflow.set_tag("dataset_version", "boston")
+        mlflow.end_run()
         return run
 
     def load_prod_model(self, model_tag, run_id=None):
