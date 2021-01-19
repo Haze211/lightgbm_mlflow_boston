@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import lightgbm as lgb
 import subprocess
+import requests
 import warnings
 
 
@@ -118,6 +119,7 @@ class LGBHyperoptProd(object):
 
     def load_prod_model(self, model_tag, run_id=None):
         runs = mlflow.search_runs()
+        runs=runs.loc[runs['status']=='FINISHED']
         if run_id:
             model_artifact = runs.loc[runs['run_id']==run_id]['artifact_uri'][0]
         else:
@@ -131,6 +133,14 @@ class LGBHyperoptProd(object):
 
     def serve_model(self, model_tag, run_id=None, port=1234):
         #execute as bash command
-        pass
+        raise NotImplementedError 
+        # to server a model be sure to check conda.yaml file - check all required packages
+        #process = subprocess.Popen(f'mlflow models serve -m ./mlruns/0/{run_id}/artifacts/model -p 1234', stdout=subprocess.PIPE)
+        #return process
+
     def get_preds(self, data, port=1234):
-        pass
+        #data should be result of call: pandas.DataFrame.to_json(..., orient='split')
+        endpoint = f'http://127.0.0.1:{port}/invocations'
+        headers = {'content-type': 'application/json; format=pandas-split'}
+        responce = requests.post(endpoint, data=data, headers=headers)
+        return responce.json()
