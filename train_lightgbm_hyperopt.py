@@ -1,5 +1,14 @@
 import numpy as np
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from sklearn.datasets import load_boston
+from sklearn.model_selection import train_test_split
+
+import mlflow
+from mlflow.tracking import MlflowClient
+from hyperopt import hp, tpe, fmin, Trials
+
+from pathlib import Path
 import lightgbm as lgb
 import subprocess
 import requests
@@ -12,8 +21,8 @@ def mean_absolute_percentage_error(y_true, y_pred):
 
 
 class LGBHyperoptProd(object):
-    def __init__(self, work_dir):
-        self.PATH = work_dir
+    def __init__(self):
+        self.PATH = ''
         
     def prepare_lgb_dataset(self):
         X, y = load_boston(return_X_y=True)
@@ -47,7 +56,7 @@ class LGBHyperoptProd(object):
         defined_space = {
             'learning_rate': hp.uniform('learning_rate', 0.01, 0.1),
             'num_boost_round': hp.quniform('num_boost_round', 50, 500, 10),
-            'num_leaves': hp.quniform('num_leaves', 1, 11, 1), #for this dataset setting high number of leaves (> 31) is pointless
+            'num_leaves': hp.quniform('num_leaves', 2, 11, 1), #for this dataset setting high number of leaves (> 31) is pointless
             'reg_alpha': hp.uniform('reg_alpha', 0.01, 0.1),
             'reg_lambda': hp.uniform('reg_lambda', 0.01, 0.1),
             #'boosting_type': hp.choice('boosting_type', ['gbdt', 'dart'])
@@ -56,11 +65,13 @@ class LGBHyperoptProd(object):
         if user_space:
             return user_space
         else:
-            return space        
+            return defined_space        
 
     def get_optim_objective(self, train_data):
         def objective(params:dict, folds:int = 3):
-
+            #hyperopt sets float type, but lgb requiers ints.
+            params['num_boost_round'] = int(params['num_boost_round'])
+            params['num_leaves'] = int(params['num_leaves'])
             cv_result = lgb.cv(
                 params,
                 train_data,
@@ -75,14 +86,15 @@ class LGBHyperoptProd(object):
             return loss
         return objective
         
-    def get_optimal_model_hyperparams(self, params, train_data, model_tag):
-        best = fmin(fn=self.get_optim_objective,
+    def get_optimal_model_hyperparams(self, objective, params:dict, train_data, maxevals:int):
+        trials = Trials()
+        best = fmin(fn=objective,
                 space=params,
                 algo=tpe.suggest,
                 max_evals=maxevals,
                 trials=trials)
-        return best
-    def tag_model_for_production(self, experiment_name, train_data, hyperparams):
+        return best, trials
+    def tag_model_for_production(self, experiment_name:str, train_data, hyperparams:dict, trials, model_tag:str):
         ##ToDO: add input and output schema with mlflow.lightgbm.signature 
         
         #Set MLflow experiment name. Used for better tracking structure
@@ -97,15 +109,15 @@ class LGBHyperoptProd(object):
         y = train_data.get_label()
 
         #change type from float to int, recuired by lgb
-        params['num_boost_round'] = int(params['num_boost_round'])
-        params['num_leaves'] = int(params['num_leaves'])
+        hyperparams['num_boost_round'] = int(hyperparams['num_boost_round'])
+        hyperparams['num_leaves'] = int(hyperparams['num_leaves'])
 
         with mlflow.start_run() as run:
             ### unpack dict with best params
-            model = lgb.LGBMRegressor(**best)
+            model = lgb.LGBMRegressor(**hyperparams)
             model.fit(X,y)
             #best item is dict with best hyperparams returned from minimizing objective (mape)
-            for name, value in best.items():
+            for name, value in hyperparams.items():
                 mlflow.log_param(name, value)
                 mlflow.log_metric('mape', trials.best_trial['result']['loss'])
                 mlflow.sklearn.log_model(model, "model")
@@ -116,6 +128,7 @@ class LGBHyperoptProd(object):
                 #dataset version is used to distinguish possbile diffrenet preprocessing options.
                 #might be used together with dvc workflow
                 mlflow.set_tag("dataset_version", "boston")
+        return run
 
     def load_prod_model(self, model_tag, run_id=None):
         runs = mlflow.search_runs()
