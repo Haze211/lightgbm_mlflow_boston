@@ -14,7 +14,7 @@ if __name__ == "__main__":
     maxevals = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     project_name = str(sys.argv[2]) if len(sys.argv) > 2 else "Boston Housing"
     model_tag = str(sys.argv[2]) if len(sys.argv) > 3 else "production.1"
-    
+
     print('========== Initializing training ========')
     main_class = LGBHyperoptProd()
 
@@ -37,8 +37,11 @@ if __name__ == "__main__":
     print(f"Best hyperparams: {best_hyperparams}")
 
     print("========= Training model with best hyperparams =========")
-    main_class. \
+    run = main_class. \
         tag_model_for_production(project_name,
          train_data, 
          best_hyperparams, 
          trials, model_tag)
+    
+    print(f"Finished run with id: {run.info.run_id}")
+    
