@@ -3,3 +3,5 @@ data
 mlruns
 .ipynb_checkpoints
 "lightgbm sample sklearn datasets.ipynb"
+.__pycache__
+.vscode
