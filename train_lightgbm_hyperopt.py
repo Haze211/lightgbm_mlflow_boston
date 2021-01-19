@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import lightgbm as lgb
+import subprocess
 import warnings
 
 
@@ -10,8 +11,9 @@ def mean_absolute_percentage_error(y_true, y_pred):
 
 
 class LGBHyperoptProd(object):
-    def __init__(self):
-        pass
+    def __init__(self, work_dir):
+        self.PATH = work_dir
+        
     def prepare_lgb_dataset(self):
         X, y = load_boston(return_X_y=True)
         boston_df = pd.DataFrame(X)
@@ -72,7 +74,7 @@ class LGBHyperoptProd(object):
             return loss
         return objective
         
-    def get_optimal_model_hyperparams(self, params, train_data):
+    def get_optimal_model_hyperparams(self, params, train_data, model_tag):
         best = fmin(fn=self.get_optim_objective,
                 space=params,
                 algo=tpe.suggest,
@@ -80,6 +82,8 @@ class LGBHyperoptProd(object):
                 trials=trials)
         return best
     def tag_model_for_production(self, experiment_name, train_data, hyperparams):
+        ##ToDO: add input and output schema with mlflow.lightgbm.signature 
+        
         #Set MLflow experiment name. Used for better tracking structure
         try:
             experiment_id = mlflow.create_experiment(experiment_name)
@@ -104,10 +108,28 @@ class LGBHyperoptProd(object):
                 mlflow.log_param(name, value)
                 mlflow.log_metric('mape', trials.best_trial['result']['loss'])
                 mlflow.sklearn.log_model(model, "model")
-                #tag model for easier search across possible big model pool in mlflow 
-                mlflow.set_tag("model.type", "production")
-        
-    def serve_model(self):
+                #tag model for easier search across possible big model pool in mlflow.
+                #idealy, there should be 1 prod model per dataset to avoid confusion.
+                mlflow.set_tag("model.type", model_tag)
+                mlflow.set_tag("dataset_name", "boston")
+                #dataset version is used to distinguish possbile diffrenet preprocessing options.
+                #might be used together with dvc workflow
+                mlflow.set_tag("dataset_version", "boston")
+
+    def load_prod_model(self, model_tag, run_id=None):
+        runs = mlflow.search_runs()
+        if run_id:
+            model_artifact = runs.loc[runs['run_id']==run_id]['artifact_uri'][0]
+        else:
+            #logging several runs with same tag will create inconsistency. first row (latest run) is returned.
+            model_artifact = runs.loc[(runs['tags.model.type'] == model_tag)]['artifact_uri'][0]
+
+        path_to_model = model_artifact + '/model'
+        model = mlflow.pyfunc.load_model(model_artifact + '/model')
+
+        return model
+
+    def serve_model(self, model_tag, run_id=None, port=1234):
         #execute as bash command
         pass
     def get_preds(self, data, port=1234):
