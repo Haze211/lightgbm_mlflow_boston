@@ -1,0 +1,11 @@
+name: Boston LGB
+
+conda_env: conda.yaml
+
+entry_points:
+    main:
+        parameters:
+            maxevals: {type: int, default: 10}
+            project_name: str
+            model_tag: str
+        command: "python train.py {maxevals} {project_name} {model_tag}
