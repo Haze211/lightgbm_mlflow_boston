@@ -51,14 +51,25 @@ After finishing the ML training cycle, its possible to view results using Mlflow
 ```bash
 mlflow ui
 ```
-By default, Mlflow will use 5000 port, so opening http://localhost:5000/#/ will show the Mlflow UI, which should look something like this:
-
-![Mlflow UI structure](https://prnt.sc/xbbhrz)
+By default, Mlflow will use 5000 port, so opening http://localhost:5000/#/ will show the Mlflow UI.
 
 Here is a [good overview](https://docs.databricks.com/applications/mlflow/tracking.html) of what you can do with the model in the UI. In short, you can compare different runs, save model, add it to model registry, set tags, change configs etc.
 
+Once you model training is done, its easy to server model, so it will act as an API and will accept calls and return predictions.
+To serve a model you need to provide a **run_id** and optionaly a port. By default, Mlflow will open 1234 port for served model.
 
+To server model localy, execute 
+```bash
+mlflow models serve -m ./mlruns/0/run_id/artifacts/model -p 1234
+```
 
+After this point you can get predictions from served model using CURL request.
+
+```bash
+curl -X POST -H "Content-Type:application/json; format=pandas-split" 
+--data 'data' 
+http://127.0.0.1:1234/invocations
+```
 
 #### Usage
 To run this project, invoke 
