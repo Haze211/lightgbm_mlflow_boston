@@ -94,3 +94,9 @@ Each call can be supplied with next params which are specified in **MLproject**
 - model_tag : Special tag for best model. Default is production.
 
 After executing run command, model with best hyperparams will be logged and will be ready to be loaded back into working directory or be served for inference.
+
+#### To Do:
+- Add shap logging
+- Add input-output schema
+- Add model registry flow (staging-qa-prod?)
+- Create cloud workflow with azueML + databricks?
