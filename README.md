@@ -19,6 +19,46 @@ Repository consists of 4 main parts:
     - Loading model based on tag or run_id for possible retraining or inference.
     - Getting predictions out of served model. 
 
+## Example workflow
+
+When working on a complex project its expected to have many iterations during training machine learning model. And its extremly easy to forgot what steps during preprocessing you have done, what hyperparameters you have used, especially if this params were handpicked based on business logic. And if you cannot ensure reproducability, you might easily forget what you have done. To simplify this whole rutine one must track preprocessing steps, evolution of the ML model, metrics during training and validaton, etc.  One way to do this is to ensure that you can easily reproduce steps that were taken. For dataset manipulation you can eiser log different tags with ```mlflow.set_tag``` which then will be visible in Mlflow run data or utilize something like [dvc](https://dvc.org/) which is data version control system, very similar to github.
+
+For controling ML experiments one can utilize MLflow in next manner:
+- Initialize new project with ```mlflow.create_experiment```
+- Start mlflow run and log metrics, model params, tags using
+``` with mlflow.start_run():
+        #initialize model
+        model = Model(...)
+        #fit 
+        model.fit(X, y)
+
+        #get predictions
+        preds = model.predict(X_test)
+
+        #evaluate metrics
+        metric = get_metric(true, preds)
+
+        #Log results
+        mlflow.log_param('param1', param1)
+        mlflow.log_metric('metric', metric)
+        
+        #Log model and add it to model registry
+        mlflow.sklearn.log_model(model, "model", registered_model_name="BestEverModel")
+```
+After finishing the ML training cycle, its possible to view results using Mlflow UI. Command should be executed from working directory. After calling ```mlflow.start_run``` Mlflow will create directory to store run data per experiment. If you dont specify name for new experiment, Mlflow will store everything in **Default** project.
+
+```bash
+mlflow ui
+```
+By default, Mlflow will use 5000 port, so opening http://localhost:5000/#/ will show the Mlflow UI, which should look something like this:
+
+![](https://prnt.sc/xbbhrz "MLflow UI")
+
+Here is a [good overview](https://docs.databricks.com/applications/mlflow/tracking.html) of what you can do with the model in the UI. In short, you can compare different runs, save model, add it to model registry, set tags, change configs etc.
+
+
+
+
 #### Usage
 To run this project, invoke 
 
