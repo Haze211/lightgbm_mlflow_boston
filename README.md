@@ -26,7 +26,8 @@ When working on a complex project its expected to have many iterations during tr
 For controling ML experiments one can utilize MLflow in next manner:
 - Initialize new project with ```mlflow.create_experiment```
 - Start mlflow run and log metrics, model params, tags using
-``` with mlflow.start_run():
+```python
+    with mlflow.start_run():
         #initialize model
         model = Model(...)
         #fit 
@@ -52,7 +53,7 @@ mlflow ui
 ```
 By default, Mlflow will use 5000 port, so opening http://localhost:5000/#/ will show the Mlflow UI, which should look something like this:
 
-![](https://prnt.sc/xbbhrz "MLflow UI")
+![Mlflow UI structure](https://prnt.sc/xbbhrz)
 
 Here is a [good overview](https://docs.databricks.com/applications/mlflow/tracking.html) of what you can do with the model in the UI. In short, you can compare different runs, save model, add it to model registry, set tags, change configs etc.
 
