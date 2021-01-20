@@ -76,7 +76,7 @@ curl -X POST -H "Content-Type:application/json; format=pandas-split"
 http://127.0.0.1:1234/invocations
 ```
 
-#### Usage
+### How to use this repository
 To run this project, invoke 
 
 ```bash
@@ -88,3 +88,9 @@ Alternatively, you can execute project directly from github
 mlflow run https://github.com/Haze211/lightgbm_mlflow_boston.git
 ```
 
+Each call can be supplied with next params which are specified in **MLproject**
+- maxevals : how many runs to use during hyperparams search. Default is 10.
+- project_name : MLflow project name. Default is Boston.
+- model_tag : Special tag for best model. Default is production.
+
+After executing run command, model with best hyperparams will be logged and will be ready to be loaded back into working directory or be served for inference.
