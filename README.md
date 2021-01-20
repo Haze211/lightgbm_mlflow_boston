@@ -55,16 +55,21 @@ By default, Mlflow will use 5000 port, so opening http://localhost:5000/#/ will 
 
 Here is a [good overview](https://docs.databricks.com/applications/mlflow/tracking.html) of what you can do with the model in the UI. In short, you can compare different runs, save model, add it to model registry, set tags, change configs etc.
 
-Once you model training is done, its easy to server model, so it will act as an API and will accept calls and return predictions.
+Once you model training is done, its easy to serve model, so it will act as an API and will accept calls and return predictions.
 To serve a model you need to provide a **run_id** and optionaly a port. By default, Mlflow will open 1234 port for served model.
 
-To server model localy, execute 
+To serve model localy, execute 
 ```bash
 mlflow models serve -m ./mlruns/0/run_id/artifacts/model -p 1234
 ```
 
-After this point you can get predictions from served model using CURL request.
+After this point you can get predictions from served model using CURL request. Data param should be a result of calling 
+```python
+    pandas.DataFrame.to_json(..., orient='split')
+```
+on your dataset.
 
+Get predictions from the model:
 ```bash
 curl -X POST -H "Content-Type:application/json; format=pandas-split" 
 --data 'data' 
